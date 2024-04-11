@@ -1,0 +1,468 @@
+<html>
+    <head>
+        <title>DogieConnect</title>
+        <link rel="icon" type="image/x-icon" href="https://lh3.google.com/u/0/d/1721Ia8-vyc7ya-yOp0iY4h6MXS5tryrd=w1860-h885-iv1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://bootswatch.com/_vendor/bootstrap/dist/css/bootstrap.css">
+        <link rel="stylesheet" href="https://bootswatch.com/_vendor/bootstrap-icons/font/bootstrap-icons.min.css">
+        <link rel="stylesheet" href="https://bootswatch.com/_vendor/prismjs/themes/prism-okaidia.css">
+        <link rel="stylesheet" href="https://bootswatch.com/_assets/css/custom.min.css">
+        <!-- Include DataTables CSS and JS files -->
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+        <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+        
+        <style>
+            .display-none{
+                display: none;
+            }
+        </style>
+        <!-- the following 3 lines are for modal -->
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        
+        <!-- Include jQuery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+        <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+        <script>
+            var appointmentsTable;
+            var appointmentData;
+            var scheduleTable;
+            var schedulingData;
+            var selectedAppointment;
+            var selectedSchedule;
+            $(document).ready(function() {
+                // Define your data within the script
+                fetch('/vetAppointmentsData')
+                    .then(response => {
+                        // Check if the response is OK
+                        if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                        }
+                        // Parse the JSON response
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Handle the JSON data
+                        console.log('Received JSON data:', data);
+                        appointmentData = data;
+                        renderVetTable(data);
+                    })
+                    .catch(error => {
+                        // Handle errors
+                        console.error('Error:', error);
+                        renderVetTable({});
+                    });
+                
+                function renderVetTable(data){
+                    // Initialize DataTable
+                    appointmentsTable = $('#vetAppointmentTable').DataTable({
+                        responsive: true,
+                        "order": [[2, 'asc']],
+                        "data": data, 
+                        "columns": [
+                            { "data": "id", "orderable": false  },
+                            { "data": "reason" },
+                            { "data": "appointmentDateTime" },
+                        ],
+                        "columnDefs":[
+                            {
+                                "targets": 0,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            <div class="btn-group">
+                                                <a style="color:white;" class="btn btn-success" id="btn_updateStatus"><i class="bi bi-check-lg"></i></a>
+                                                <a data-toggle="modal" data-target="#appointmentModal" style="color:white;" class="btn btn-primary" id="btn_edit"><i class="bi bi-pencil-fill"></i></a>
+                                                <a class="btn btn-danger" id="btn_delete"><i class="bi bi-trash3-fill"></i></a>
+                                            </div>
+                                        </center>`;
+                                }
+                            },
+                        ]
+                    });
+                }
+
+                fetch('/schedulingData')
+                    .then(response => {
+                        // Check if the response is OK
+                        if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                        }
+                        // Parse the JSON response
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Handle the JSON data
+                        console.log('Received JSON data:', data);
+                        schedulingData = data;
+                        renderSchedulingTable(data);
+                    })
+                    .catch(error => {
+                        // Handle errors
+                        console.error('Error:', error);
+                        renderSchedulingTable({});
+                    });
+                
+                function renderSchedulingTable(data){
+                    // Initialize DataTable
+                    scheduleTable = $('#scheduleTable').DataTable({
+                        responsive: true,
+                        "order": [[2, 'asc']],
+                        "data": data, 
+                        "columns": [
+                            { "data": "id", "orderable": false  },
+                            { "data": "name" },
+                            { "data": "time" },
+                        ],
+                        "columnDefs":[
+                            {
+                                "targets": 0,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            <div class="btn-group">
+                                                <a data-toggle="modal" data-target="#schedulingModal" style="color:white;" class="btn btn-primary" id="btn_editSchedule"><i class="bi bi-pencil-fill"></i></a>
+                                                <a class="btn btn-danger" id="btn_deleteSchedule"><i class="bi bi-trash3-fill"></i></a>
+                                            </div>
+                                        </center>`;
+                                }
+                            },
+                        ]
+                    });
+                }
+
+                $(document).on("click", "#btn_edit", function () {
+                    $('#vetModalUpdateID').removeClass('display-none');
+                    $('#vetModalSaveID').addClass('display-none');
+                    var rowdata = appointmentsTable.row($(this).closest('tr')).data();
+                    document.getElementById("reasonInput").value = rowdata.reason;
+                    document.getElementById("datetimeInput").value = rowdata.appointmentDateTime;
+                    selectedAppointment = rowdata.id;
+                });
+
+                $(document).on("click", "#btn_editSchedule", function () {
+                    $('#schedulingModalUpdateID').removeClass('display-none');
+                    $('#schedulingModalSaveID').addClass('display-none');
+                    var rowdata = scheduleTable.row($(this).closest('tr')).data();
+                    document.getElementById("nameInput").value = rowdata.name;
+                    document.getElementById("timeInput").value = rowdata.time;
+                    selectedSchedule = rowdata.id;
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <div class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" style="">
+            <div class="container">
+              <a href="../" class="navbar-brand"><img width="60" src="https://lh3.googleusercontent.com/fife/ALs6j_G7hHC3rOjXrgk_BzYlgOWxNK8uxNTLyqJJyP8IWL7gNvI6r8jNsSuo27CtDPeYI02uoeqSp4LoAL0Yb87WivpwJvrBXEdd9YXRSc10C0GJmWQWtbmx630lJxwOWdbVOG1b78PhS1nU2WxlXxJngjYbeS-8EasruWeV6FMztosbRtrEPXkAJP9BLxP6eug9nYsF6H1q6cTE_emrcjimD-LrNME9SQJRVqWmVIfUQiW-T-XVPxDtU_EvgfrFDv8DFSQQFo-rI1Fa1V-emV431STFNuuW6Pt8v7Yr2kvEjyf_rh2fURKYvvXDPVqY_zWcPfjgx9kJH0OJRm_zenpecBfJnJ6c4ZE5bmwOtzR94FHNflPt7T4vw80XMo926pGg5IluyiFJM1UD5cjniSAj2IvctVbOU__sYyfjiqg2TYoayRhn5OwVpLYCvMdFb5rmny0G0jA9S01xWrolfTBe11kArUhFt9WCjpMnWl0Yw3E7z3wkwvWwyMXFse0nD9OfDnHQ9_rbqXpKKpKYKBWzuJnabqFL3BDBayGzLKFqoOJT0xSknSGXX1ZX6jcE-qkdhtzxoLde7Tl638oxydvkBLgyNWZ7JjFg77n_pbA-CL3_ou0nmgKW9e56UBdVQx9OXi3FjJndGDys2JlL6gSOO6dbc2mWUMcZ3ughNmKQI9gIjbP96Ai5pF6LvAtygV_lHR8A7Lhxioq96XgM-TVYqm6Rfi-WiNbq_oV3q8vvOeEntHPYiQv5USzz6RCGNqMZqCYfKlrnGkRJVCKZtz_XWYVa5xkqdUVRGn534gWSYEO9pPjV0NSD0sgSqlXbqGaIl9OOwlZ7ZWHuYh1HKdoB3AgB8J0iTlF2pysVIvw_tYd-UtFmqnlkELj7RAnuaYhJ-3OAcHKfL5gkVoAJa_owdKLP0V5uS19SngoBCzBkiu9EGR7Y_ZoaDDIiQPwKkc6hoU7qofXF6w8Ar6NPXa5FzRbvuBEIEV-2kiba3KnqdH0RIjIchTzMsSvdiqBBuaIL2o5Ton5XFzdM95AIyECTZFnzjnhBO4NIWzGxaU0auD6n5-ybeTMSet3uQJxBcCk81FrUYlY2Bep8phFdMnZHQ5mltgtaGbkQvjyEpVx7BQCXuWAMIo2z1hAdZi2v0cSL-k464LT0_eOAI1_sBWgKPh9xvlUZHcjn-DJNBh4BE7CZfjFED7nIM_-Y-pNS_m_1TfJcig_jNB5ePwa4hUOnMqvfrROvgwIfCJc0QdvUOZzp9qbKdrepHQcWqrfL-V5wtw_mYu0nM4wOzvr3fVbESzQdbo_mP7c0ggFGuM1MS6X27hIE_mYBBNXdmzCWclC9xg9Uez4iNnP7jQpWO_kXtKoJZaLzUTHd7t23y8N-1MKATIh_dJTGbsAj9CDEntmoHCJdUetN8-Agg5gUHX3TdvCTlwjqQqPvdgDR3C21z99zSUQrBOxgpDR-rP3vsJHKiCgCFstsDWR7PGNkRO_Grdx9pnmW8jVGTrc-x3ozBKVzSjPX3cm6odQmwTm82OQ33sU9Rx87g_NiKRp5QG5b60e-kP8HCRcJiyszr2JbVuBQubL5auPRWNq4KklpimqOdrm-gZIaAQETEw=w1860-h885"></a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="collapse navbar-collapse" id="navbarResponsive">
+                <ul class="navbar-nav">
+                    <!-- <li class="nav-item">
+                        <a class="nav-link" href="">Location</a>
+                    </li> -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="">Vet</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="">Scheduling</a>
+                    </li>
+                </ul>
+                
+              </div>
+            </div>
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="page-header">
+                        <h1 id="navbars">Notifications</h1>
+                    </div>
+                    <div class="accordion" id="accordionExample">
+                        <div class="accordion-item">
+                          <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                              Vet Appointment 
+                              <span class="badge bg-primary rounded-pill">1</span>
+                            </button>
+                          </h2>
+                          <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample" style="">
+                            <div class="accordion-body">
+                              <strong>Appointment today!!</strong> Reason: Check up.
+                            </div>
+                          </div>
+                        </div>
+                        <div class="accordion-item">
+                          <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                              Schedule 
+                              <span class="badge bg-primary rounded-pill">2</span>
+                            </button>
+                          </h2>
+                          <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                              <strong>Sample.</strong>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="page-header">
+                        <h1 id="navbars">Vet Appointments</h1>
+                    </div>
+                    <a data-toggle="modal" data-target="#appointmentModal" style="color:white; margin-bottom:15px;" class="btn btn-success" id="btn_addVetAppointment"><i class="bi bi-plus-circle"></i> Add Vet Appointment</a>
+                    <table id="vetAppointmentTable" class="display">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Reason</th>
+                                <th>Appointment Time</th>
+                                <!-- <th>Actions</th> -->
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="page-header">
+                        <h1 id="navbars">Scheduling</h1>
+                    </div>
+                    <a data-toggle="modal" data-target="#schedulingModal" style="color:white; margin-bottom:15px;" class="btn btn-success" id="btn_addScheduling"><i class="bi bi-plus-circle"></i> Add Schedule</a>
+                    <table id="scheduleTable" class="display">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Name</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Appointment Modal -->
+        <div class="modal fade" id="appointmentModal" tabindex="-1" role="dialog" aria-labelledby="appoinmentModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Appointment Details</h5>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <fieldset>
+                                <div>
+                                    <label for="reasonInput" class="form-label">Reason</label>
+                                    <input type="text" class="form-control" id="reasonInput" aria-describedby="reason" placeholder="Enter reason">
+                                </div>
+                                <div>
+                                    <label for="datetimeInput" class="form-label mt-4">Date and Time</label>
+                                    <input type="datetime-local" class="form-control" id="datetimeInput" aria-describedby="reason" placeholder="Enter date and time">
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="postData()" class="" id="vetModalSaveID">Save</button>
+                        <button type="button" class="btn btn-primary" onclick="UpdateVet()" class="" id="vetModalUpdateID">Update</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="vetModalClose()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointment Modal -->
+        <div class="modal fade" id="schedulingModal" tabindex="-1" role="dialog" aria-labelledby="schedulingModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Schedule Details</h5>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <fieldset>
+                                <div>
+                                    <label for="nameInput" class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="nameInput" aria-describedby="name" placeholder="Enter name">
+                                </div>
+                                <div>
+                                    <label for="timeInput" class="form-label mt-4">Time</label>
+                                    <input type="time" class="form-control" id="timeInput" aria-describedby="reason" placeholder="Enter date and time">
+                                </div>
+                            </fieldset>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="postScheduleData()" class="display-none" id="schedulingModalSaveID">Save</button>
+                        <button type="button" class="btn btn-primary" onclick="UpdateSchedule()" class="display-none" id="schedulingModalUpdateID">Update</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="schedulingModalClose()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function UpdateVet () {
+                var reasonInput = document.getElementById("reasonInput").value;
+                var datetimeInput = document.getElementById("datetimeInput").value;
+                
+                let newAppointmentData = appointmentData.filter(item => item.id !== selectedAppointment);
+
+                let newAppointment = {
+                    "id": selectedAppointment,
+                    "appointmentDateTime": datetimeInput,
+                    "reason": reasonInput
+                };
+                newAppointmentData.push(newAppointment);
+
+                updateESP(newAppointmentData);
+            }
+            function UpdateSchedule () {
+                var nameInput = document.getElementById("nameInput").value;
+                var datetimeInput = document.getElementById("timeInput").value;
+                
+                let newSchedulingData = schedulingData.filter(item => item.id !== selectedSchedule);
+
+                let newSchedule = {
+                    "id": selectedSchedule,
+                    "time": datetimeInput,
+                    "name": nameInput
+                };
+                newSchedulingData.push(newSchedule);
+
+                updateESPSchedule(newSchedulingData);
+            }
+            $(document).on("click", "#btn_addVetAppointment", function () {
+                $('#vetModalSaveID').removeClass('display-none');
+                $('#vetModalUpdateID').addClass('display-none');
+            });
+            
+            $(document).on("click", "#btn_addScheduling", function () {
+                $('#schedulingModalSaveID').removeClass('display-none');
+                $('#schedulingModalUpdateID').addClass('display-none');
+            });
+            function vetModalClose(){
+                $('#vetModalSaveID').addClass('display-none');
+                $('#vetModalUpdateID').addClass('display-none');
+            }
+            function schedulingModalClose(){
+                $('#schedulingModalSaveID').addClass('display-none');
+                $('#schedulingModalUpdateID').addClass('display-none');
+            }
+            function postData() {
+                var reasonInput = document.getElementById("reasonInput").value;
+                var datetimeInput = document.getElementById("datetimeInput").value;
+                
+                var maxId = appointmentData.reduce((max, appointment) => Math.max(max, appointment.id), 0);
+
+                let newAppointment = {
+                    "id": maxId + 1,
+                    "appointmentDateTime": datetimeInput,
+                    "reason": reasonInput
+                };
+                appointmentData.push(newAppointment);
+
+                updateESP(appointmentData);
+            }
+            function postScheduleData() {
+                var reasonInput = document.getElementById("nameInput").value;
+                var datetimeInput = document.getElementById("timeInput").value;
+                
+                var maxId = schedulingData.reduce((max, appointment) => Math.max(max, appointment.id), 0);
+
+                let newSched = {
+                    "id": maxId + 1,
+                    "time": datetimeInput,
+                    "name": reasonInput
+                };
+                schedulingData.push(newSched);
+
+                updateESPSchedule(schedulingData);
+            }
+            $(document).on("click", "#btn_updateStatus", function () {
+                var rowdata = appointmentsTable.row($(this).closest('tr')).data();
+                
+                if(confirm(`Are you sure you want to check ${rowdata.reason}?`)){
+                    let newAppointmentData = appointmentData.filter(item => item.id !== rowdata.id);
+                    updateESP(newAppointmentData);
+                }
+            });
+            $(document).on("click", "#btn_delete", function () {
+                var rowdata = appointmentsTable.row($(this).closest('tr')).data();
+                
+                if(confirm(`Are you sure you want to delete ${rowdata.reason}?`)){
+                    let newAppointmentData = appointmentData.filter(item => item.id !== rowdata.id);
+                    updateESP(newAppointmentData);
+                }
+            });
+            $(document).on("click", "#btn_deleteSchedule", function () {
+                var rowdata = scheduleTable.row($(this).closest('tr')).data();
+                
+                if(confirm(`Are you sure you want to delete ${rowdata.name}?`)){
+                    let newScheduleData = schedulingData.filter(item => item.id !== rowdata.id);
+                    updateESPSchedule(newScheduleData);
+                }
+            });
+            function updateESP(appointmentData){
+                var formData = new FormData();
+                formData.append('data', JSON.stringify(appointmentData));
+
+                fetch('/post', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log(data);
+                    if(data[0].status === "success"){
+                        location.reload();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    // Handle errors here
+                });
+            }
+            function updateESPSchedule(scheduleData){
+                var formData = new FormData();
+                formData.append('data', JSON.stringify(scheduleData));
+
+                fetch('/postSchedule', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    console.log(data);
+                    if(data[0].status === "success"){
+                        location.reload();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    // Handle errors here
+                });
+            }
+        </script>
+        <script src="https://bootswatch.com/_vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        
+    </body>
+</html>

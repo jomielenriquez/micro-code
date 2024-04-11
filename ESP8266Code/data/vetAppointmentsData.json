@@ -1,0 +1,12 @@
+[
+    {
+        "id": 1,
+        "appointmentDateTime": "2024-03-28T10:00:00",
+        "reason": "Annual checkup"
+    },
+    {
+        "id": 2,
+        "appointmentDateTime": "2024-04-05T14:30:00",
+        "reason": "Vaccination"
+    }
+]
