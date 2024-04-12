@@ -63,7 +63,7 @@ void setup() {
   });
 
   server.on("/SendMessage", HTTP_GET, [](AsyncWebServerRequest* request) {
-    Serial.println("SampleMessage");
+    Serial.println("{\"message\": \"this is a testing\"}");
     request->send(LittleFS, "/test.html");
   });
 
