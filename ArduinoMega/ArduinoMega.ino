@@ -12,16 +12,18 @@ float calibration_factor = -284; //-7050 worked for my 440lb max scale setup
 float units;
 
 Servo servo;
+// Servo mixer;
 SoftwareSerial esp8266(10,11);
 
 String serialMessage = "";
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   esp8266.begin(9600);
   Serial.println("Initializing");
 
   servo.attach(4);
+  // mixer.attach(5);
 
   scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
   scale.set_scale(calibration_factor);
@@ -57,6 +59,10 @@ void loop() {
       delay(1000); // wait for one second
       servo.write(90);
       delay(1000); // wait for one second
+      servo.write(0); // move MG996R's shaft to angle 180°
+      delay(1000); // wait for one second
+      servo.write(90);
+      delay(1000); // wait for one second
     }
     else{
       Serial.println("Message: '" + serialMessage + "'");
@@ -76,3 +82,7 @@ float getWeight(){
   ounces = units * 0.035274;
   return units;
 }
+
+// LOAD CELL
+// DT => 3
+// SCK => 2
