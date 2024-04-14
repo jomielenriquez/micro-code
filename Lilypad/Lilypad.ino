@@ -2,24 +2,37 @@
 #include <TinyGPS++.h>
 
 TinyGPSPlus gps;  // The TinyGPS++ object
-SoftwareSerial ss(4, 5); // The serial connection to the GPS device
-SoftwareSerial mySerial(10, 11); // GSM module connection
-String MobileNumber = "+639517108081";
+SoftwareSerial GPS(5, 6); // The serial connection to the GPS device
+SoftwareSerial SIM800L(7, 8); // GSM module connection
+String MobileNumber = "+639568774952";
 bool locationRequested = false; // Flag to track if location request has been received
 
 void setup() {
   Serial.begin(9600);
-  mySerial.begin(9600);
-  ss.begin(9600);
+  GPS.begin(9600);
+  delay(1000);
+  SIM800L.begin(9600);
+  
+  Serial.print("Connecting to network");
+  while (true){
+    SIM800L.println("AT+CREG?");
+    Serial.print(".");
+    if(!isConnected()){ delay(2000); }
+    else { break; }
+  }
+
+  SIM800L.println("AT+CMGF=1");
+  delay(1000);
+  SIM800L.println("AT+CNMI=1,2,0,0,0");
 }
 
 void loop() {
   // Check for incoming SMS messages
-  if (mySerial.available()) {
-    String message = mySerial.readStringUntil('\n');
+  if (SIM800L.available()) {
+    String message = SIM800L.readStringUntil('\n');
     Serial.println(message);
-    delay(2000);
-    if (message.indexOf("GET_LOCATION") != -1) {
+    getnumber(message);
+    if (message.indexOf("LOCATION") != -1) {
       locationRequested = true;
       Serial.println("Location requested...");
     }
@@ -30,10 +43,9 @@ void loop() {
     sendLocation();
     locationRequested = false; // Reset flag
   }
-
-  // Read GPS data
-  while (ss.available()) {
-    if (gps.encode(ss.read())) {
+  //Read GPS data
+  while (GPS.available()) {
+    if (gps.encode(GPS.read())) {
       if (gps.location.isValid()) {
         Serial.print("Latitude: ");
         Serial.print(gps.location.lat(), 6);
@@ -44,37 +56,107 @@ void loop() {
   }
 }
 
+bool isConnected() {
+  while (true){
+    if (SIM800L.available()) {
+      String message = SIM800L.readStringUntil('\n');
+      Serial.println(message);
+      if (message.indexOf("+CREG: 0,1") != -1) {
+        Serial.println("GSM Connected");
+        return true;
+      }
+      else{
+        return false;
+      }
+    }
+    break;
+  }
+  return false;
+}
+
 void sendLocation() {
-  Serial.println("sending");
-  String latStr = String(gps.location.lat(), 6);
-  String lngStr = String(gps.location.lng(), 6);
+  String latStr = "";
+  String lngStr = "";
+  
+  GPS.begin(9600);
+
+  Serial.println("waiting for GPS");
+  while (true) {
+    GPS.begin(9600);
+    if (gps.encode(GPS.read())) {
+      if (gps.location.isValid()) {
+        Serial.print("Latitude: ");
+        Serial.print(gps.location.lat(), 6);
+        Serial.print(", Longitude: ");
+        Serial.println(gps.location.lng(), 6);
+        latStr = String(gps.location.lat(), 6);
+        lngStr = String(gps.location.lng(), 6);
+        break;
+      }
+    }
+  }
+
+  SIM800L.begin(9600);
+  Serial.println("GPS AVAILABLE!!");
+  Serial.println("Sending");
+
+  String loclink="location is google . com/maps/place/",comma=",";
   String message = "Latitude: " + latStr + ", Longitude: " + lngStr;
 
   // Send the message
-  Serial.println("AT+CMGF=1"); // Set SMS mode to text
-  mySerial.println("AT+CMGF=1"); // Set SMS mode to text
+  SIM800L.println("AT+CMGF=1\r"); // Set SMS mode to text
   delay(1000);
-  Serial.println("AT+CMGS=\"" + MobileNumber + "\""); // Specify recipient phone number
-  mySerial.println("AT+CMGS=\"" + MobileNumber + "\""); // Specify recipient phone number
+  SIM800L.println("AT+CMGS=\"" + MobileNumber + "\"");
   delay(1000);
-  Serial.println(message); // Send message content
-  mySerial.println(message); // Send message content
-  delay(100);
-  mySerial.write(26); // End message with Ctrl+Z
+  // SIM800L.println(message);
+  // SIM800L.print(loclink);
+  // SIM800L.print("https://www.google.com/maps/?q=");
+  // SIM800L.print("q=");
+  SIM800L.print(latStr);
+  SIM800L.print(comma);
+  SIM800L.println(lngStr);
   delay(1000);
+  SIM800L.write(0x1A); // End message with Ctrl+Z
+  delay(1000);
+}
+
+void getnumber(String input){
+  int startPos = input.indexOf('+');
+  
+  // If "+"" is found
+  if (startPos != -1) {
+    // Extract the substring starting from the position of "+"
+    String phoneNumber = input.substring(startPos);
+    
+    // Find the position of the first occurrence of ","
+    int endPos = phoneNumber.indexOf(',');
+    
+    // If "," is found
+    if (endPos != -1) {
+      // Extract the substring from the position of "+" to the position of ","
+      phoneNumber = phoneNumber.substring(7, endPos - 1);
+      
+      // Print the extracted phone number
+      Serial.println(phoneNumber);
+      MobileNumber = phoneNumber;
+    }
+  }
 }
 
 // WIRING
 
 // GPS
-// TX => lilypad 4
-// RX => lilypad 5
+// TX => lilypad 5
+// RX => lilypad 6
 // VCC => lilypad +
 // GND => lilypad -
 
 // GSM
 
-// RXD => lilypad 10
-// TXD => lilypad 11
+// RXD => lilypad 7
+// TXD => lilypad 8
 // VCC => 3.4v
 // GND => GND
+
+// USB CONNECTION
+// USB DTR => LEFT SIDE
