@@ -17,7 +17,7 @@ void setup() {
   while (true){
     SIM800L.println("AT+CREG?");
     Serial.print(".");
-    if(!isConnected()){ delay(2000); }
+    if(!isConnected()){ delay(1000); }
     else { break; }
   }
 
@@ -57,10 +57,11 @@ void loop() {
 }
 
 bool isConnected() {
+  delay(500);
   while (true){
     if (SIM800L.available()) {
       String message = SIM800L.readStringUntil('\n');
-      Serial.println(message);
+      Serial.println("'" + message + "'");
       if (message.indexOf("+CREG: 0,1") != -1) {
         Serial.println("GSM Connected");
         return true;
@@ -100,24 +101,44 @@ void sendLocation() {
   Serial.println("GPS AVAILABLE!!");
   Serial.println("Sending");
 
-  String loclink="location is google . com/maps/place/",comma=",";
-  String message = "Latitude: " + latStr + ", Longitude: " + lngStr;
-
   // Send the message
   SIM800L.println("AT+CMGF=1\r"); // Set SMS mode to text
   delay(1000);
   SIM800L.println("AT+CMGS=\"" + MobileNumber + "\"");
   delay(1000);
-  // SIM800L.println(message);
-  // SIM800L.print(loclink);
-  // SIM800L.print("https://www.google.com/maps/?q=");
-  // SIM800L.print("q=");
   SIM800L.print(latStr);
-  SIM800L.print(comma);
+  SIM800L.print(",");
   SIM800L.println(lngStr);
   delay(1000);
-  SIM800L.write(0x1A); // End message with Ctrl+Z
+  SIM800L.write(26);
+  // SIM800L.write(0x1A); // End message with Ctrl+Z
   delay(1000);
+  
+  SIM800L.begin(9600);
+  while(true){
+    if (SIM800L.available()) {
+      String message = SIM800L.readStringUntil('\n');
+      Serial.println("'" + message + "'");
+      if (message.indexOf("+CMGS") != -1) {
+        Serial.println("Sending End..");
+        break;
+      }
+    }
+  }
+
+  SIM800L.begin(9600);
+
+  Serial.print("Connecting to network");
+  while (true){
+    SIM800L.println("AT+CREG?");
+    Serial.print(".");
+    if(!isConnected()){ delay(1000); }
+    else { break; }
+  }
+  
+  SIM800L.println("AT+CMGF=1");
+  delay(1000);
+  SIM800L.println("AT+CNMI=1,2,0,0,0");
 }
 
 void getnumber(String input){

@@ -6,13 +6,21 @@
 #define LOADCELL_DOUT_PIN  3
 #define LOADCELL_SCK_PIN  2
 
+#define DOGULTRASONICTRIG 8
+#define DOGULTRASONICECHO 9
+
+#define FOODULTRASONICTRIG 6
+#define FOODULTRASONICECHO 7
+
+#define WATERPOWER 12
+#define WATERSENSOR 13
+
 HX711 scale;
 
 float calibration_factor = -284; //-7050 worked for my 440lb max scale setup
 float units;
 
 Servo servo;
-// Servo mixer;
 SoftwareSerial esp8266(10,11);
 
 String serialMessage = "";
@@ -23,7 +31,19 @@ void setup() {
   Serial.println("Initializing");
 
   servo.attach(4);
-  // mixer.attach(5);
+
+  // Setup Dog trigger
+  pinMode(DOGULTRASONICTRIG, OUTPUT);
+  pinMode(DOGULTRASONICECHO, INPUT);
+
+  // Setup Food trigger
+  pinMode(FOODULTRASONICTRIG, OUTPUT);
+  pinMode(FOODULTRASONICECHO, INPUT);
+
+  // Setup Water Sensor
+  pinMode(WATERPOWER, OUTPUT);
+  pinMode(WATERSENSOR, INPUT);
+  digitalWrite(WATERPOWER, LOW);
 
   scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
   scale.set_scale(calibration_factor);
@@ -32,6 +52,26 @@ void setup() {
 
 void loop() {
   bool isOpen = false;
+  
+  /* 
+  Create a variable that will hold the next schedule
+  when the dog is need, check the next schedule
+  */
+  float dogDistance = getDogDistance();
+  Serial.print("Dog Distance: ");
+  Serial.println(dogDistance);
+  if(dogDistance < 5){
+    isOpen = true;
+    serialMessage = "{\"message\": \"Detected.\"}";
+  }
+
+  Serial.print("Food Distance: ");
+  Serial.println(getFoodDistance());
+
+  // zero means there is water
+  Serial.print("Water Reading: ");
+  Serial.println(readWaterSensor());
+
   while(esp8266.available()){
     char c = (char)esp8266.read();
     if(c == '\n'){
@@ -72,6 +112,14 @@ void loop() {
   }
 }
 
+int readWaterSensor(){
+  digitalWrite(WATERPOWER, HIGH);
+  delay(10);
+  int val = digitalRead(WATERSENSOR);
+  digitalWrite(WATERPOWER, LOW);
+  return val;
+}
+
 float getWeight(){
   units = scale.get_units() * -1, 10;
   float ounces;
@@ -83,6 +131,41 @@ float getWeight(){
   return units;
 }
 
+float getDogDistance(){
+  digitalWrite(DOGULTRASONICTRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(DOGULTRASONICTRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(DOGULTRASONICTRIG, LOW);
+  long duration = pulseIn(DOGULTRASONICECHO, HIGH);
+  return duration * 0.0133 / 2;
+}
+
+float getFoodDistance(){
+  digitalWrite(FOODULTRASONICTRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(FOODULTRASONICTRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(FOODULTRASONICTRIG, LOW);
+  long duration = pulseIn(FOODULTRASONICECHO, HIGH);
+  return duration * 0.0133 / 2;
+}
+
 // LOAD CELL
 // DT => 3
 // SCK => 2
+// 5V
+
+
+// Servo
+// RED => 5V
+// BROWN => GND
+// YELLOW => 4
+
+
+// ESP8266
+// ESP TX => 10
+// ESP RX => 11
+// 3.3V
+
+
