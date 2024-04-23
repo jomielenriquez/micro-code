@@ -1,0 +1,6 @@
+[
+    {
+        "Type": "Sched",
+        "Message": "Did not dispense at 10:00 because current weight it 100grams"
+    }
+]

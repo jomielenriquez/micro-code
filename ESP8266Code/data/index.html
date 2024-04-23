@@ -15,6 +15,9 @@
             .display-none{
                 display: none;
             }
+            body {
+                padding-top: 90px !important;
+            }
         </style>
         <!-- the following 3 lines are for modal -->
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -54,7 +57,6 @@
                         console.error('Error:', error);
                         renderVetTable({});
                     });
-                
                 function renderVetTable(data){
                     // Initialize DataTable
                     appointmentsTable = $('#vetAppointmentTable').DataTable({
@@ -103,7 +105,29 @@
                         console.error('Error:', error);
                         renderSchedulingTable({});
                     });
-                
+                // renderSchedulingTable([
+                //     {
+                //         "id": 1,
+                //         "time": "2024-03-28T10:00:00",
+                //         "amountFrom": 10,
+                //         "amountTo": 10,
+                //         "name": "Breakfast"
+                //     },
+                //     {
+                //         "id": 2,
+                //         "time": "2024-04-05T14:30:00",
+                //         "amountFrom": 10,
+                //         "amountTo": 10,
+                //         "name": "Lunch"
+                //     },
+                //     {
+                //         "id": 3,
+                //         "time": "2024-04-05T14:30:00",
+                //         "amountFrom": 10,
+                //         "amountTo": 10,
+                //         "name": "Dinner"
+                //     }
+                // ]);
                 function renderSchedulingTable(data){
                     // Initialize DataTable
                     scheduleTable = $('#scheduleTable').DataTable({
@@ -114,6 +138,7 @@
                             { "data": "id", "orderable": false  },
                             { "data": "name" },
                             { "data": "time" },
+                            { "data": "amountFrom" },
                         ],
                         "columnDefs":[
                             {
@@ -124,6 +149,14 @@
                                                 <a data-toggle="modal" data-target="#schedulingModal" style="color:white;" class="btn btn-primary" id="btn_editSchedule"><i class="bi bi-pencil-fill"></i></a>
                                                 <a class="btn btn-danger" id="btn_deleteSchedule"><i class="bi bi-trash3-fill"></i></a>
                                             </div>
+                                        </center>`;
+                                }
+                            },
+                            {
+                                "targets": 3,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            `+row.amountFrom+ " grams to " + row.amountTo + " grams" +`
                                         </center>`;
                                 }
                             },
@@ -146,6 +179,8 @@
                     var rowdata = scheduleTable.row($(this).closest('tr')).data();
                     document.getElementById("nameInput").value = rowdata.name;
                     document.getElementById("timeInput").value = rowdata.time;
+                    document.getElementById("amountFromInput").value = rowdata.amountFrom;
+                    document.getElementById("amountToInput").value = rowdata.amountTo;
                     selectedSchedule = rowdata.id;
                 });
             });
@@ -164,10 +199,16 @@
                         <a class="nav-link" href="">Location</a>
                     </li> -->
                     <li class="nav-item">
-                        <a class="nav-link" href="">Vet</a>
+                        <a class="nav-link" href="#div_vet_appointments">Vet</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="">Scheduling</a>
+                        <a class="nav-link" href="#div_scheduling">Scheduling</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#div_dispense_log">Dispense Log</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#div_failed_dispense_log">Failed Dispense Log</a>
                     </li>
                 </ul>
                 
@@ -178,40 +219,183 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="page-header">
+                        <h1 id="navbars">Status</h1>
+                    </div>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                          Food
+                          <span id="foodBadge" class="badge bg-primary rounded-pill"></span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                          Water
+                          <span id="waterBadge" class="badge bg-success rounded-pill"></span>
+                        </li>
+                    </ul>
+                    <script>
+                        $(function(){
+                            setInterval(UpdateStatus, 3000);
+                        })
+
+                        function mapNumberRange(number) {
+                            var min1 = 1, max1 = 6, min2 = 8, max2 = 0;
+                            // Calculate the percentage of the number's position in the first range
+                            let percentage = (number - min1) / (max1 - min1);
+                            
+                            // Map the percentage to the second range
+                            return Math.round(min2 + percentage * (max2 - min2));
+                        }
+
+                        function UpdateStatus(){
+                            fetch('/getupdates')
+                                .then(response => {
+                                    // Check if the response is OK
+                                    if (!response.ok) {
+                                    throw new Error('Network response was not ok');
+                                    }
+                                    // Parse the JSON response
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    console.log(data);
+                                    if(data[0]["water"] == 0){
+                                        $("#waterBadge").removeClass("bg-warning");
+                                        $("#waterBadge").addClass("bg-success");
+                                        $("#waterBadge").text("HIGH");
+                                    }
+                                    else if(data[0]["water"] == 1){
+                                        $("#waterBadge").addClass("bg-warning");
+                                        $("#waterBadge").removeClass("bg-success");
+                                        $("#waterBadge").text("LOW");
+                                    }
+                                    
+                                    var foodInKL = mapNumberRange(data[0]["food"]);
+                                    if(foodInKL < 3){
+                                        $("#foodBadge").addClass("bg-warning");
+                                        $("#foodBadge").removeClass("bg-success");
+                                        $("#foodBadge").text(foodInKL + " kg");
+                                    }
+                                    else if(foodInKL > 3){
+                                        $("#foodBadge").removeClass("bg-warning");
+                                        $("#foodBadge").addClass("bg-success");
+                                        $("#foodBadge").text(foodInKL + " kg");
+                                    }
+                                    
+                                })
+                                .catch(error => {
+                                    // Handle errors
+                                    console.error('Error:', error);
+                                    renderSchedulingTable({});
+                                });
+                        }
+                    </script>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="page-header">
                         <h1 id="navbars">Notifications</h1>
                     </div>
+                    <script>
+                        $(function(){
+                            // var data = [
+                            //     {
+                            //         "Type": "Vet",
+                            //         "Message": "You've got a scheduled check-up today."
+                            //     },
+                            //     {
+                            //         "Type": "Sched",
+                            //         "Message": "Did not dispense at 10:00 because current weight it 100grams"
+                            //     }
+                            // ];
+
+                            setInterval(UpdateNotif, 3000);
+                        })
+
+                        function UpdateNotif(){
+                            fetch('/NotifData')
+                                .then(response => {
+                                    // Check if the response is OK
+                                    if (!response.ok) {
+                                    throw new Error('Network response was not ok');
+                                    }
+                                    // Parse the JSON response
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    
+                                    appointmentData.forEach(function(currentValue, index, array) {
+                                        var appointmentDate = new Date(currentValue["appointmentDateTime"]).getDate();
+                                        var appointmentMonth = new Date(currentValue["appointmentDateTime"]).getMonth();
+                                        var appointmentYear = new Date(currentValue["appointmentDateTime"]).getFullYear();
+
+                                        if (appointmentDate == new Date().getDate() && appointmentMonth == new Date().getMonth() && appointmentYear == new Date().getFullYear()){
+                                            data.push({
+                                                "Type": "Vet",
+                                                "Message": "You've got a scheduled <strong>" + currentValue["reason"] + " today (" + appointmentMonth + "/" + appointmentDate + "/" + appointmentYear + ") at " + new Date(currentValue["appointmentDateTime"]).toLocaleTimeString() + "</strong>."
+                                            });
+                                        }
+                                    });
+
+                                    var vetCount = data.filter(d => d.Type == "Vet");
+                                    var schedCount = data.filter(d => d.Type == "Sched");
+                                    $("#vetCountID").text(vetCount.length);
+                                    $("#schedCountID").text(schedCount.length);
+
+                                    $("#collapseOne").empty();
+                                    $("#collapseTwo").empty();
+                                    data.forEach(function(currentValue, index, array) {
+                                        if(currentValue["Type"] == "Vet"){
+                                            $("#collapseOne").append(`<div class="accordion-body">
+                                            `+currentValue["Message"]+`
+                                            </div>`);
+                                        }
+                                        if(currentValue["Type"] == "Sched"){
+                                            $("#collapseTwo").append(`<div class="accordion-body">
+                                            `+currentValue["Message"]+`
+                                            </div>`);
+                                        }
+                                    });
+                                })
+                                .catch(error => {
+                                    // Handle errors
+                                    console.error('Error:', error);
+                                    renderSchedulingTable({});
+                                });
+                        }
+                    </script>
                     <div class="accordion" id="accordionExample">
                         <div class="accordion-item">
                           <h2 class="accordion-header" id="headingOne">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
                               Vet Appointment 
-                              <span class="badge bg-primary rounded-pill">1</span>
+                              <span class="badge bg-primary rounded-pill" id="vetCountID">0</span>
                             </button>
                           </h2>
                           <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample" style="">
-                            <div class="accordion-body">
+                            <!-- <div class="accordion-body">
                               <strong>Appointment today!!</strong> Reason: Check up.
-                            </div>
+                            </div> -->
                           </div>
                         </div>
                         <div class="accordion-item">
                           <h2 class="accordion-header" id="headingTwo">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                               Schedule 
-                              <span class="badge bg-primary rounded-pill">2</span>
+                              <span class="badge bg-primary rounded-pill" id="schedCountID">0</span>
                             </button>
                           </h2>
                           <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-                            <div class="accordion-body">
+                            <!-- <div class="accordion-body">
                               <strong>Sample.</strong>
-                            </div>
+                            </div> -->
                           </div>
                         </div>
                     </div>
                 </div>
             </div>
             <br>
-            <div class="row">
+            <div class="row" id="div_vet_appointments">
                 <div class="col-lg-12">
                     <div class="page-header">
                         <h1 id="navbars">Vet Appointments</h1>
@@ -230,7 +414,7 @@
                 </div>
             </div>
             <br>
-            <div class="row">
+            <div class="row" id="div_scheduling">
                 <div class="col-lg-12">
                     <div class="page-header">
                         <h1 id="navbars">Scheduling</h1>
@@ -242,11 +426,153 @@
                                 <th></th>
                                 <th>Name</th>
                                 <th>Time</th>
+                                <th>Amount</th>
                             </tr>
                         </thead>
                     </table>
                 </div>
             </div>
+            <div class="row" id="div_dispense_log">
+                <div class="col-lg-12">
+                    <div class="page-header">
+                        <h1 id="navbars">Dispense Log</h1>
+                    </div>
+                    <table id="dispenseTable" class="display">
+                        <thead>
+                            <tr>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+            <script>
+                $(function(){
+
+                    // Code for retrieving dispense log
+                    $.ajax({
+                        url: "http://dataapi.somee.com/api/dispense/",
+                        type: 'GET',
+                        success: function(res) {
+                            console.log(res);
+                            renderDispenseLogTable(res);
+                        }
+                    });
+                })
+                
+                function renderDispenseLogTable(data){
+                    // Initialize DataTable
+                    var dispenseLogTable = $('#dispenseTable').DataTable({
+                        responsive: true,
+                        "order": [[1, 'desc']],
+                        "data": data, 
+                        "columns": [
+                            { "data": "amount" },
+                            { "data": "createdDate" },
+                            { "data": "createdDate" }
+                        ],
+                        "columnDefs":[
+                            {
+                                "targets": 0,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            `+row.amount+ " " + row.unit +`
+                                        </center>`;
+                                }
+                            },
+                            {
+                                "targets": 1,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            `+ new Date(data).toDateString() +`
+                                        </center>`;
+                                }
+                            },
+                            {
+                                "targets": 2,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            `+ new Date(data).toLocaleTimeString() +`
+                                        </center>`;
+                                }
+                            },
+                        ]
+                    });
+                }
+            </script>
+            <br>
+            <div class="row" id="div_failed_dispense_log">
+                <div class="col-lg-12">
+                    <div class="page-header">
+                        <h1 id="navbars">Failed Dispense Log</h1>
+                    </div>
+                    <table id="failDispenseTable" class="display">
+                        <thead>
+                            <tr>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+            <script>
+                $(function(){
+
+                    // Code for retrieving dispense log
+                    $.ajax({
+                        url: "http://dataapi.somee.com/api/dispense/fail",
+                        type: 'GET',
+                        success: function(res) {
+                            console.log(res);
+                            renderFailDispenseLogTable(res);
+                        }
+                    });
+                })
+                
+                function renderFailDispenseLogTable(data){
+                    // Initialize DataTable
+                    var dispenseLogTable = $('#failDispenseTable').DataTable({
+                        responsive: true,
+                        "order": [[1, 'desc']],
+                        "data": data, 
+                        "columns": [
+                            { "data": "amount" },
+                            { "data": "createdDate" },
+                            { "data": "createdDate" }
+                        ],
+                        "columnDefs":[
+                            {
+                                "targets": 0,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            ` + (row.amount * -1) + " " + row.unit +`
+                                        </center>`;
+                                }
+                            },
+                            {
+                                "targets": 1,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            `+ new Date(data).toDateString() +`
+                                        </center>`;
+                                }
+                            },
+                            {
+                                "targets": 2,
+                                "render": function (data, type, row, meta) {
+                                    return `<center>
+                                            `+ new Date(data).toLocaleTimeString() +`
+                                        </center>`;
+                                }
+                            },
+                        ]
+                    });
+                }
+            </script>
         </div>
     
         <!-- Appointment Modal -->
@@ -279,7 +605,7 @@
             </div>
         </div>
 
-        <!-- Appointment Modal -->
+        <!-- Schedule Modal -->
         <div class="modal fade" id="schedulingModal" tabindex="-1" role="dialog" aria-labelledby="schedulingModalLabel" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
@@ -296,6 +622,14 @@
                                 <div>
                                     <label for="timeInput" class="form-label mt-4">Time</label>
                                     <input type="time" class="form-control" id="timeInput" aria-describedby="reason" placeholder="Enter date and time">
+                                </div>
+                                <div>
+                                    <label for="amountFromInput" class="form-label">Amount From (grams)</label>
+                                    <input type="number" class="form-control" id="amountFromInput" aria-describedby="name" placeholder="Amount in grams">
+                                </div>
+                                <div>
+                                    <label for="amountToInput" class="form-label">Amount To (grams)</label>
+                                    <input type="number" class="form-control" id="amountToInput" aria-describedby="name" placeholder="Amount in grams">
                                 </div>
                             </fieldset>
                         </form>
@@ -328,13 +662,17 @@
             function UpdateSchedule () {
                 var nameInput = document.getElementById("nameInput").value;
                 var datetimeInput = document.getElementById("timeInput").value;
+                var amountFromInput = document.getElementById("amountFromInput").value;
+                var amountToInput = document.getElementById("amountToInput").value;
                 
                 let newSchedulingData = schedulingData.filter(item => item.id !== selectedSchedule);
 
                 let newSchedule = {
                     "id": selectedSchedule,
                     "time": datetimeInput,
-                    "name": nameInput
+                    "name": nameInput,
+                    "amountFrom": amountFromInput,
+                    "amountTo": amountToInput,
                 };
                 newSchedulingData.push(newSchedule);
 
@@ -375,13 +713,17 @@
             function postScheduleData() {
                 var reasonInput = document.getElementById("nameInput").value;
                 var datetimeInput = document.getElementById("timeInput").value;
+                var amountFromInput = document.getElementById("amountFromInput").value;
+                var amountToInput = document.getElementById("amountToInput").value;
                 
                 var maxId = schedulingData.reduce((max, appointment) => Math.max(max, appointment.id), 0);
 
                 let newSched = {
                     "id": maxId + 1,
                     "time": datetimeInput,
-                    "name": reasonInput
+                    "name": reasonInput,
+                    "amountFrom": amountFromInput,
+                    "amountTo": amountToInput,
                 };
                 schedulingData.push(newSched);
 
@@ -463,6 +805,11 @@
             }
         </script>
         <script src="https://bootswatch.com/_vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-        
+        <footer id="footer">
+            <div class="row">
+                <div class="col-lg-12">
+                </div>
+            </div>
+        </footer>
     </body>
 </html>
