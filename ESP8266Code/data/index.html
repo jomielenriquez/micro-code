@@ -443,6 +443,7 @@
                                 <th>Amount</th>
                                 <th>Date</th>
                                 <th>Time</th>
+                                <th>DateTime</th>
                             </tr>
                         </thead>
                     </table>
@@ -466,10 +467,11 @@
                     // Initialize DataTable
                     var dispenseLogTable = $('#dispenseTable').DataTable({
                         responsive: true,
-                        "order": [[1, 'desc']],
+                        "order": [[3, 'desc']],
                         "data": data, 
                         "columns": [
                             { "data": "amount" },
+                            { "data": "createdDate" },
                             { "data": "createdDate" },
                             { "data": "createdDate" }
                         ],
@@ -514,6 +516,7 @@
                                 <th>Amount</th>
                                 <th>Date</th>
                                 <th>Time</th>
+                                <th>DateTime</th>
                             </tr>
                         </thead>
                     </table>
@@ -537,10 +540,11 @@
                     // Initialize DataTable
                     var dispenseLogTable = $('#failDispenseTable').DataTable({
                         responsive: true,
-                        "order": [[1, 'desc']],
+                        "order": [[3, 'desc']],
                         "data": data, 
                         "columns": [
                             { "data": "amount" },
+                            { "data": "createdDate" },
                             { "data": "createdDate" },
                             { "data": "createdDate" }
                         ],
