@@ -198,7 +198,7 @@ void setup() {
 
   // if you need to set the time, use rtc.adjust.
   // Below is an example of setting the time to April 22, 2024 - 9:39 PM
-  // rtc.adjust(DateTime(2024, 4, 22, 21, 39, 0)); 
+  // rtc.adjust(DateTime(2024, 4, 30, 9, 0, 0)); 
   DateTime now = rtc.now();  // Get initial time from RTC
 
   File file = LittleFS.open("/schedulingData.json", "r");

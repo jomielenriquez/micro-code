@@ -64,12 +64,17 @@ void loop() {
   Serial.print("Dog Distance: ");
   Serial.print(dogDistance);
   
+  delay(1000);
+
   Serial.print(", Food Distance: ");
   Serial.print(getFoodDistance());
+
+  delay(1000);
 
   // zero means there is water
   Serial.print(", Water Reading: ");
   Serial.println(readWaterSensor());
+
 
   if(statusCount >= statusCountLimit){
     Serial.print("passing status");
@@ -139,11 +144,14 @@ void loop() {
           Serial.print(getWeight());
           Serial.println(" grams");
 
+          delay(1000);
+
           servo.write(0);
           delay(1000);
           servo.write(90);
-          delay(1000);
 
+          delay(1000);
+          
           isDone = true;
         }
         if(isDone){
@@ -188,7 +196,7 @@ void loop() {
     serialMessage = "";
   }
   delay(1000);
-  statusCount = statusCount + 1000;
+  statusCount = statusCount + 2000;
 }
 
 int readWaterSensor(){
